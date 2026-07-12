@@ -1,4 +1,4 @@
-FROM node:lts-alpine
+FROM node:22-alpine
 
 LABEL maintainer="LibreTV Team"
 LABEL description="LibreTV - 免费在线视频搜索与观看平台"
