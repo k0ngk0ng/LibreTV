@@ -18,6 +18,7 @@ import {
   validateUsername,
 } from './lib/data-store.mjs';
 import { createSessionManager } from './lib/session-manager.mjs';
+import { loadSourceConfig } from './lib/source-config.mjs';
 
 dotenv.config({ quiet: true });
 
@@ -125,6 +126,7 @@ const config = {
   dataFile: process.env.DATA_FILE || path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'libretv.json'),
   adminUsername: process.env.ADMIN_USERNAME || 'admin',
   adminPassword: process.env.ADMIN_PASSWORD || process.env.ADMINPASSWORD || process.env.PASSWORD || '',
+  sourceConfigFile: process.env.API_CONFIG_FILE || 'config/sites.json',
   requestTimeout: positiveInteger(process.env.REQUEST_TIMEOUT, 15000),
   maxRetries: positiveInteger(process.env.MAX_RETRIES, 2),
   cacheMaxAge: process.env.CACHE_MAX_AGE || '1d',
@@ -138,6 +140,42 @@ const config = {
 };
 
 const versionInfo = resolveVersion();
+const sourceConfig = await loadSourceConfig({ filePath: config.sourceConfigFile, baseDir: __dirname });
+const serializedSourceConfig = JSON.stringify({
+  apiSites: sourceConfig.apiSites,
+  defaultSources: sourceConfig.defaultSources,
+  hideAdultSources: sourceConfig.hideAdultSources,
+})
+  .replace(/</g, '\\u003c')
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029');
+const runtimeSourceConfigScript = `window.__LIBRETV_RUNTIME_CONFIG__ = Object.freeze(${serializedSourceConfig});\n`;
+
+function versionAssetReferences(html) {
+  const assetVersion = encodeURIComponent(versionInfo.version);
+  const versionedHtml = html.replace(
+    /\b(src|href)=(["'])((?:js|css)\/[^"'?#]+\.(?:js|css))\2/g,
+    (match, attribute, quote, asset) => `${attribute}=${quote}${asset}?v=${assetVersion}${quote}`,
+  );
+  const safeVersion = versionInfo.version.replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]);
+  return versionedHtml.replace('</head>', `    <meta name="libretv-version" content="${safeVersion}">\n</head>`);
+}
+
+const htmlPages = new Map(
+  ['login.html', 'index.html', 'player.html', 'watch.html', 'about.html', 'privacy.html', 'admin.html']
+    .map(fileName => [fileName, versionAssetReferences(fs.readFileSync(path.join(__dirname, fileName), 'utf8'))]),
+);
+
+function sendHtmlPage(res, fileName) {
+  return res.type('html').send(htmlPages.get(fileName));
+}
+
 const store = createDataStore({ filePath: config.dataFile });
 await store.init({ adminUsername: config.adminUsername, adminPassword: config.adminPassword });
 
@@ -236,15 +274,19 @@ app.get('/api/version', (req, res) => {
 });
 
 const publicFiles = new Map([
-  ['/login.html', path.join(__dirname, 'login.html')],
   ['/css/auth.css', path.join(__dirname, 'css', 'auth.css')],
   ['/js/login.js', path.join(__dirname, 'js', 'login.js')],
   ['/image/logo.png', path.join(__dirname, 'image', 'logo.png')],
   ['/image/logo-black.png', path.join(__dirname, 'image', 'logo-black.png')],
 ]);
 
+app.get('/login.html', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return sendHtmlPage(res, 'login.html');
+});
+
 app.get([...publicFiles.keys()], (req, res) => {
-  res.setHeader('Cache-Control', req.path === '/login.html' ? 'no-store' : 'public, max-age=86400');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.sendFile(publicFiles.get(req.path));
 });
 
@@ -345,6 +387,11 @@ function requireAdmin(req, res, next) {
 }
 
 app.use(authenticateRequest);
+
+app.get('/js/runtime-config.js', (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.type('application/javascript').send(runtimeSourceConfigScript);
+});
 
 app.get('/api/auth/me', (req, res) => {
   res.json({ user: publicSessionUser(req.auth.user), csrfToken: req.auth.session.csrfToken });
@@ -634,10 +681,10 @@ const pageFiles = new Map([
 
 app.get([...pageFiles.keys()], (req, res) => {
   if (req.path === '/admin.html' && req.auth.user.role !== 'admin') return res.status(403).send('需要管理员权限');
-  return res.sendFile(path.join(__dirname, pageFiles.get(req.path)));
+  return sendHtmlPage(res, pageFiles.get(req.path));
 });
 
-app.get('/s=:keyword', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/s=:keyword', (req, res) => sendHtmlPage(res, 'index.html'));
 
 for (const directory of ['css', 'js', 'libs', 'image']) {
   app.use(`/${directory}`, express.static(path.join(__dirname, directory), {
@@ -666,5 +713,6 @@ app.use((req, res) => res.status(404).send('页面未找到'));
 app.listen(config.port, () => {
   console.log(`LibreTV ${versionInfo.version} 运行在 http://localhost:${config.port}`);
   console.log(`账户数据保存在 ${config.dataFile}`);
+  console.log(`已从 ${sourceConfig.filePath} 加载 ${Object.keys(sourceConfig.apiSites).length} 个资源站`);
   if (config.debug) console.log('调试模式已启用');
 });

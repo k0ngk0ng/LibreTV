@@ -1,4 +1,7 @@
 async function fetchRuntimeVersion() {
+    const embeddedVersion = document.querySelector('meta[name="libretv-version"]')?.content;
+    if (embeddedVersion) return embeddedVersion;
+
     const response = await fetch('/api/version', { cache: 'no-store' });
     if (!response.ok) throw new Error('获取版本失败');
     const data = await response.json();

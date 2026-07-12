@@ -29,8 +29,15 @@ function loadJsonArray(key, fallback) {
 }
 
 // 全局变量
-let selectedAPIs = loadJsonArray('selectedAPIs', ['tyyszy', 'dyttzy', 'bfzy', 'ruyi']).filter(item => typeof item === 'string');
 let customAPIs = loadJsonArray('customAPIs', []).map(normalizeCustomApi).filter(Boolean);
+let selectedAPIs = loadJsonArray('selectedAPIs', DEFAULT_API_SOURCES)
+    .filter(item => {
+        if (typeof item !== 'string') return false;
+        if (API_SITES[item]) return true;
+        const match = item.match(/^custom_(\d+)$/);
+        return match && Number(match[1]) < customAPIs.length;
+    });
+if (selectedAPIs.length === 0) selectedAPIs = [...DEFAULT_API_SOURCES];
 
 // 添加当前播放的集数索引
 let currentEpisodeIndex = 0;
@@ -117,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // 设置默认API选择（如果是第一次加载）
     if (!localStorage.getItem('hasInitializedDefaults')) {
         // 默认选中资源
-        selectedAPIs = ["tyyszy", "bfzy", "dyttzy", "ruyi"];
+        selectedAPIs = [...DEFAULT_API_SOURCES];
         localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
 
         // 默认选中过滤开关

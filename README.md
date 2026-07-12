@@ -63,6 +63,44 @@ npm start
 
 首次启动且数据文件中没有用户时，服务端会使用 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员。为了兼容旧部署，首次启动也会依次读取旧变量 `ADMINPASSWORD`、`PASSWORD`；创建完成后密码以哈希形式保存，环境变量不会用于日常登录验证。
 
+## 资源站配置
+
+内置资源站已经从前端代码移到 [`config/sites.json`](config/sites.json)。服务启动时读取 `API_CONFIG_FILE` 指定的 JSON 文件，文件有误时会拒绝启动并在日志中给出原因。
+
+```json
+{
+  "settings": {
+    "defaultSources": ["example"],
+    "hideAdultSources": false
+  },
+  "sites": {
+    "example": {
+      "api": "https://example.com/api.php/provide/vod",
+      "name": "示例资源",
+      "detail": "https://example.com",
+      "adult": false,
+      "enabled": true
+    }
+  }
+}
+```
+
+- `api`、`name` 必填；`detail`、`adult`、`enabled` 可选。
+- `enabled: false` 会在启动时忽略该资源站。
+- `defaultSources` 指定新用户默认选中的资源站。
+- 修改文件后需要重启 LibreTV，浏览器会自动加载新的运行时配置。
+
+Docker 部署时，将宿主机文件只读挂载到容器并指定容器内路径：
+
+```bash
+docker run ... \
+  -e API_CONFIG_FILE=/app/config/sites.json \
+  -v /opt/libretv/sites.json:/app/config/sites.json:ro \
+  ghcr.io/k0ngk0ng/libretv:latest
+```
+
+资源站文件不包含密码时可设置为 `chmod 644 /opt/libretv/sites.json`，确保容器内的非 root 用户可以读取。
+
 ## 从旧密码版迁移
 
 1. 备份当前部署和反向代理配置。
@@ -97,6 +135,7 @@ git push origin v1.0.0
 | `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员用户名 |
 | `ADMIN_PASSWORD` | 无 | 首次启动必填，至少 8 个字符 |
 | `DATA_DIR` | `./data` | 用户和观看记录目录 |
+| `API_CONFIG_FILE` | `./config/sites.json` | 启动时读取的资源站 JSON 文件 |
 | `SESSION_IDLE_HOURS` | `168` | 会话最长空闲时间 |
 | `SESSION_MAX_DAYS` | `30` | 会话绝对有效期 |
 | `TRUST_PROXY` | `true` | 是否信任第一层反向代理 |
