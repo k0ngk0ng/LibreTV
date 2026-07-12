@@ -6,7 +6,24 @@ const selectedAPIs = (() => {
         return [];
     }
 })();
-const customAPIs = getStoredCustomApis();
+const customAPIs = (() => {
+    try {
+        if (typeof getStoredCustomApis === 'function') return getStoredCustomApis();
+    } catch {
+        // 混合缓存可能加载到不兼容的旧 helper；播放器仍应继续启动。
+    }
+    return [];
+})();
+const PLAYER_API_SITES = typeof API_SITES !== 'undefined' && API_SITES ? API_SITES : {};
+const PLAYER_AD_FILTER_STORAGE = typeof PLAYER_CONFIG !== 'undefined'
+    ? PLAYER_CONFIG.adFilteringStorage
+    : 'adFilteringEnabled';
+const PLAYER_PROXY_URL = typeof PROXY_URL !== 'undefined' ? PROXY_URL : '/proxy/';
+
+function getPlayerCustomApiInfo(customApiIndex) {
+    const index = Number.parseInt(customApiIndex, 10);
+    return Number.isInteger(index) && index >= 0 && index < customAPIs.length ? customAPIs[index] : null;
+}
 
 // 改进返回功能
 function goBack(event) {
@@ -163,7 +180,7 @@ function initializePageContent() {
     document.getElementById('autoplayToggle').checked = autoplayEnabled;
 
     // 获取广告过滤设置
-    adFilteringEnabled = localStorage.getItem(PLAYER_CONFIG.adFilteringStorage) !== 'false'; // 默认为true
+    adFilteringEnabled = localStorage.getItem(PLAYER_AD_FILTER_STORAGE) !== 'false'; // 默认为true
 
     // 监听自动连播开关变化
     document.getElementById('autoplayToggle').addEventListener('change', function (e) {
@@ -1098,7 +1115,7 @@ async function saveToHistory({ includeEpisodes = true, keepalive = false } = {})
     const urlParams = new URLSearchParams(window.location.search);
     const sourceCode = urlParams.get('source') || '';
     const playbackState = PlaybackState.get(playbackStateId);
-    const sourceName = playbackState?.sourceName || API_SITES[sourceCode]?.name || sourceCode;
+    const sourceName = playbackState?.sourceName || PLAYER_API_SITES[sourceCode]?.name || sourceCode;
     const id_from_params = urlParams.get('id') || playbackState?.vodId || '';
 
     // 获取当前播放进度
@@ -1364,8 +1381,8 @@ function renderResourceInfoBar() {
     
     // 查找当前源名称，从 API_SITES 和 custom_api 中查找即可
     let resourceName = currentSource
-    if (currentSource && API_SITES[currentSource]) {
-        resourceName = API_SITES[currentSource].name;
+    if (currentSource && PLAYER_API_SITES[currentSource]) {
+        resourceName = PLAYER_API_SITES[currentSource].name;
     }
     if (resourceName === currentSource) {
         const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
@@ -1407,8 +1424,8 @@ async function showSwitchResourceModal() {
 
     // 搜索
     const resourceOptions = selectedAPIs.map((curr) => {
-        if (API_SITES[curr]) {
-            return { key: curr, name: API_SITES[curr].name };
+        if (PLAYER_API_SITES[curr]) {
+            return { key: curr, name: PLAYER_API_SITES[curr].name };
         }
         const customIndex = parseInt(curr.replace('custom_', ''), 10);
         if (customAPIs[customIndex]) {
@@ -1461,7 +1478,7 @@ async function showSwitchResourceModal() {
         const imageWrapper = document.createElement('div');
         imageWrapper.className = 'aspect-[2/3] rounded-lg overflow-hidden bg-gray-800';
         const image = document.createElement('img');
-        image.src = /^https?:\/\//i.test(String(result.vod_pic || '')) ? `${PROXY_URL}${encodeURIComponent(result.vod_pic)}` : 'image/nomedia.png';
+        image.src = /^https?:\/\//i.test(String(result.vod_pic || '')) ? `${PLAYER_PROXY_URL}${encodeURIComponent(result.vod_pic)}` : 'image/nomedia.png';
         image.alt = String(result.vod_name || currentVideoTitle);
         image.className = 'w-full h-full object-cover';
         image.addEventListener('error', () => { image.src = 'image/nomedia.png'; }, { once: true });
@@ -1505,7 +1522,7 @@ async function switchToResource(sourceKey, vodId) {
         // 处理自定义API源
         if (sourceKey.startsWith('custom_')) {
             const customIndex = sourceKey.replace('custom_', '');
-            const customApi = getCustomApiInfo(customIndex);
+            const customApi = getPlayerCustomApiInfo(customIndex);
             if (!customApi) {
                 showToast('自定义API配置无效', 'error');
                 hideLoading();
@@ -1555,7 +1572,7 @@ async function switchToResource(sourceKey, vodId) {
                 episodes: data.episodes,
                 episodeIndex: targetIndex,
                 sourceCode: sourceKey,
-                sourceName: API_SITES[sourceKey]?.name || sourceKey,
+                sourceName: PLAYER_API_SITES[sourceKey]?.name || sourceKey,
                 vodId,
             });
         } else {
@@ -1564,7 +1581,7 @@ async function switchToResource(sourceKey, vodId) {
                 episodes: data.episodes,
                 episodeIndex: targetIndex,
                 sourceCode: sourceKey,
-                sourceName: API_SITES[sourceKey]?.name || sourceKey,
+                sourceName: PLAYER_API_SITES[sourceKey]?.name || sourceKey,
                 vodId,
                 returnUrl: previousState?.returnUrl || '/',
             });

@@ -4,52 +4,22 @@ const PROXY_URL = '/proxy/';    // 适用于 Cloudflare, Netlify (带重写), Ve
 const SEARCH_HISTORY_KEY = 'videoSearchHistory';
 const MAX_HISTORY_ITEMS = 5;
 
-function getStoredCustomApis() {
-    try {
-        const parsed = JSON.parse(localStorage.getItem('customAPIs') || '[]');
-        if (!Array.isArray(parsed)) return [];
-        return parsed.map(api => {
-            try {
-                const url = new URL(String(api?.url || ''));
-                if (!['http:', 'https:'].includes(url.protocol)) return null;
-                let detail = '';
-                if (api?.detail) {
-                    const detailUrl = new URL(String(api.detail));
-                    if (['http:', 'https:'].includes(detailUrl.protocol)) detail = detailUrl.toString().replace(/\/$/, '');
-                }
-                return {
-                    name: String(api?.name || '自定义资源').replace(/[<>&"'`\u0000-\u001f]/g, '').slice(0, 50),
-                    url: url.toString().replace(/\/$/, ''),
-                    detail,
-                    isAdult: Boolean(api?.isAdult),
-                };
-            } catch {
-                return null;
-            }
-        }).filter(Boolean);
-    } catch {
-        return [];
-    }
-}
-
-function getCustomApiInfo(customApiIndex) {
-    const index = Number.parseInt(customApiIndex, 10);
-    const apis = typeof customAPIs !== 'undefined' && Array.isArray(customAPIs) ? customAPIs : getStoredCustomApis();
-    return Number.isInteger(index) && index >= 0 && index < apis.length ? apis[index] : null;
-}
-
 // 网站信息配置
 const SITE_CONFIG = {
     name: 'LibreTV',
-    url: 'https://libretv.is-an.org',
+    url: '',
     description: '免费在线视频搜索与观看平台',
     logo: 'image/logo.png'
 };
 
-// 资源站配置由服务端在启动时读取，并通过 /js/runtime-config.js 注入。
-const RUNTIME_SOURCE_CONFIG = window.__LIBRETV_RUNTIME_CONFIG__;
-if (!RUNTIME_SOURCE_CONFIG || typeof RUNTIME_SOURCE_CONFIG.apiSites !== 'object') {
-    throw new Error('运行时资源站配置未加载');
+// 资源站配置由服务端在启动时读取，并直接注入受认证的 HTML。
+const RUNTIME_SOURCE_CONFIG = window.__LIBRETV_RUNTIME_CONFIG__ || {
+    apiSites: {},
+    defaultSources: [],
+    hideAdultSources: false,
+};
+if (!window.__LIBRETV_RUNTIME_CONFIG__) {
+    console.error('运行时资源站配置未加载，将仅保留直接播放能力');
 }
 const API_SITES = Object.freeze(RUNTIME_SOURCE_CONFIG.apiSites);
 const DEFAULT_API_SOURCES = Object.freeze(

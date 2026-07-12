@@ -50,7 +50,7 @@ function resolveGitDirectory() {
   return null;
 }
 
-function readGitCommit() {
+function readEnvironmentCommit() {
   const candidates = [
     process.env.GIT_COMMIT,
     process.env.COMMIT_SHA,
@@ -58,7 +58,12 @@ function readGitCommit() {
     process.env.VERCEL_GIT_COMMIT_SHA,
   ];
   const environmentCommit = candidates.find(value => /^[0-9a-f]{7,40}$/i.test(String(value || '').trim()));
-  if (environmentCommit) return environmentCommit.trim().toLowerCase();
+  return environmentCommit ? environmentCommit.trim().toLowerCase() : null;
+}
+
+function readGitCommit() {
+  const environmentCommit = readEnvironmentCommit();
+  if (environmentCommit) return environmentCommit;
 
   const gitDirectory = resolveGitDirectory();
   if (!gitDirectory) return null;
@@ -94,7 +99,10 @@ function resolveVersion() {
   const tag = [process.env.APP_VERSION, process.env.GIT_TAG, process.env.RELEASE_TAG]
     .map(value => String(value || '').trim())
     .find(value => /^v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(value));
-  if (tag) return { version: tag, source: 'tag' };
+  if (tag) {
+    const commit = readGitCommit();
+    return { version: tag, source: 'tag', ...(commit ? { commit } : {}) };
+  }
 
   try {
     const buildVersion = fs.readFileSync(path.join(__dirname, '.build-version'), 'utf8').trim();
@@ -127,6 +135,8 @@ const config = {
   adminUsername: process.env.ADMIN_USERNAME || 'admin',
   adminPassword: process.env.ADMIN_PASSWORD || process.env.ADMINPASSWORD || process.env.PASSWORD || '',
   sourceConfigFile: process.env.API_CONFIG_FILE || 'config/sites.json',
+  fallbackSourceConfigFile: process.env.DEFAULT_API_CONFIG_FILE || 'config/sites.json',
+  strictSourceConfig: booleanValue(process.env.API_CONFIG_STRICT),
   requestTimeout: positiveInteger(process.env.REQUEST_TIMEOUT, 15000),
   maxRetries: positiveInteger(process.env.MAX_RETRIES, 2),
   cacheMaxAge: process.env.CACHE_MAX_AGE || '1d',
@@ -140,7 +150,18 @@ const config = {
 };
 
 const versionInfo = resolveVersion();
-const sourceConfig = await loadSourceConfig({ filePath: config.sourceConfigFile, baseDir: __dirname });
+const assetRevision = (versionInfo.commit || versionInfo.version).slice(0, 12);
+const immutableAssetRevision = readEnvironmentCommit()?.slice(0, 12) || '';
+let sourceConfig;
+try {
+  sourceConfig = await loadSourceConfig({ filePath: config.sourceConfigFile, baseDir: __dirname });
+} catch (error) {
+  const configuredPath = path.resolve(__dirname, config.sourceConfigFile);
+  const fallbackPath = path.resolve(__dirname, config.fallbackSourceConfigFile);
+  if (config.strictSourceConfig || configuredPath === fallbackPath) throw error;
+  console.warn(`${error.message}；改用镜像内默认配置 ${fallbackPath}`);
+  sourceConfig = await loadSourceConfig({ filePath: fallbackPath, baseDir: __dirname });
+}
 const serializedSourceConfig = JSON.stringify({
   apiSites: sourceConfig.apiSites,
   defaultSources: sourceConfig.defaultSources,
@@ -151,8 +172,8 @@ const serializedSourceConfig = JSON.stringify({
   .replace(/\u2029/g, '\\u2029');
 const runtimeSourceConfigScript = `window.__LIBRETV_RUNTIME_CONFIG__ = Object.freeze(${serializedSourceConfig});\n`;
 
-function versionAssetReferences(html) {
-  const assetVersion = encodeURIComponent(versionInfo.version);
+function versionAssetReferences(fileName, html) {
+  const assetVersion = encodeURIComponent(assetRevision);
   const versionedHtml = html.replace(
     /\b(src|href)=(["'])((?:js|css)\/[^"'?#]+\.(?:js|css))\2/g,
     (match, attribute, quote, asset) => `${attribute}=${quote}${asset}?v=${assetVersion}${quote}`,
@@ -164,16 +185,36 @@ function versionAssetReferences(html) {
     '"': '&quot;',
     "'": '&#39;',
   })[character]);
-  return versionedHtml.replace('</head>', `    <meta name="libretv-version" content="${safeVersion}">\n</head>`);
+  const runtimeConfigElement = ['index.html', 'player.html'].includes(fileName)
+    ? `    <script>${runtimeSourceConfigScript}</script>\n`
+    : '';
+  return versionedHtml.replace(
+    '</head>',
+    `    <meta name="libretv-version" content="${safeVersion}">\n${runtimeConfigElement}</head>`,
+  );
 }
 
 const htmlPages = new Map(
   ['login.html', 'index.html', 'player.html', 'watch.html', 'about.html', 'privacy.html', 'admin.html']
-    .map(fileName => [fileName, versionAssetReferences(fs.readFileSync(path.join(__dirname, fileName), 'utf8'))]),
+    .map(fileName => [fileName, versionAssetReferences(fileName, fs.readFileSync(path.join(__dirname, fileName), 'utf8'))]),
 );
 
 function sendHtmlPage(res, fileName) {
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Vary', 'Cookie');
   return res.type('html').send(htmlPages.get(fileName));
+}
+
+function setAuthenticatedAssetCacheHeaders(res) {
+  const requestUrl = new URL(res.req.originalUrl, 'http://localhost');
+  res.setHeader('Vary', 'Cookie');
+  if (immutableAssetRevision === assetRevision && requestUrl.searchParams.get('v') === assetRevision) {
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+  } else {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+  }
 }
 
 const store = createDataStore({ filePath: config.dataFile });
@@ -273,6 +314,18 @@ app.get('/api/version', (req, res) => {
   res.json(versionInfo);
 });
 
+// 兼容仍在浏览器缓存中的旧版本检测脚本；新前端不再请求该路径。
+app.get('/VERSION.txt', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('text/plain').send(`${versionInfo.version}\n`);
+});
+
+app.get('/service-worker.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, 'service-worker.js'));
+});
+
 const publicFiles = new Map([
   ['/css/auth.css', path.join(__dirname, 'css', 'auth.css')],
   ['/js/login.js', path.join(__dirname, 'js', 'login.js')],
@@ -286,7 +339,7 @@ app.get('/login.html', (req, res) => {
 });
 
 app.get([...publicFiles.keys()], (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
   res.sendFile(publicFiles.get(req.path));
 });
 
@@ -362,6 +415,10 @@ async function authenticateRequest(req, res, next) {
     sessions.destroy(token);
     res.setHeader('Set-Cookie', sessionCookie('', req, 0));
   }
+
+  res.setHeader('Vary', 'Cookie');
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
 
   const isPageRequest = req.method === 'GET' && (
     req.path === '/' ||
@@ -691,17 +748,26 @@ for (const directory of ['css', 'js', 'libs', 'image']) {
     maxAge: config.cacheMaxAge,
     fallthrough: false,
     dotfiles: 'deny',
+    setHeaders: setAuthenticatedAssetCacheHeaders,
   }));
 }
 
-for (const file of ['manifest.json', 'robots.txt', 'service-worker.js']) {
-  app.get(`/${file}`, (req, res) => res.sendFile(path.join(__dirname, file)));
+for (const file of ['manifest.json', 'robots.txt']) {
+  app.get(`/${file}`, (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.sendFile(path.join(__dirname, file));
+  });
 }
 
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   console.error('服务器错误:', error.message);
   const status = error.statusCode || 500;
+  if (/^\/(?:css|js|libs|image)\//.test(req.path)) {
+    res.setHeader('Vary', 'Cookie');
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+  }
   if (req.path.startsWith('/api/') || req.path.startsWith('/proxy/')) {
     return res.status(status).json({ error: status >= 500 ? '服务器内部错误' : error.message });
   }

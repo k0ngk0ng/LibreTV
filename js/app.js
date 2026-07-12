@@ -1,23 +1,25 @@
-function normalizeCustomApi(api) {
-    try {
-        const normalizeUrl = value => {
-            if (!value) return '';
-            const parsed = new URL(String(value).trim());
-            if (!['http:', 'https:'].includes(parsed.protocol)) return '';
-            return parsed.toString().replace(/\/$/, '');
-        };
-        const url = normalizeUrl(api?.url);
-        const detail = normalizeUrl(api?.detail);
-        const name = String(api?.name || '')
-            .replace(/[<>&"'`\u0000-\u001f]/g, '')
-            .trim()
-            .slice(0, 50);
-        if (!name || !url) return null;
-        return { name, url, detail, isAdult: Boolean(api?.isAdult) };
-    } catch {
-        return null;
-    }
-}
+const normalizeAppCustomApi = typeof normalizeCustomApi === 'function'
+    ? normalizeCustomApi
+    : function (api) {
+        try {
+            const normalizeUrl = value => {
+                if (!value) return '';
+                const parsed = new URL(String(value).trim());
+                if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) return '';
+                return parsed.toString().replace(/\/$/, '');
+            };
+            const url = normalizeUrl(api?.url);
+            const detail = normalizeUrl(api?.detail);
+            const name = String(api?.name || '')
+                .replace(/[<>&"'`\u0000-\u001f]/g, '')
+                .trim()
+                .slice(0, 50);
+            if (!name || !url) return null;
+            return { name, url, detail, isAdult: Boolean(api?.isAdult) };
+        } catch {
+            return null;
+        }
+    };
 
 function loadJsonArray(key, fallback) {
     try {
@@ -29,7 +31,7 @@ function loadJsonArray(key, fallback) {
 }
 
 // 全局变量
-let customAPIs = loadJsonArray('customAPIs', []).map(normalizeCustomApi).filter(Boolean);
+let customAPIs = loadJsonArray('customAPIs', []).map(normalizeAppCustomApi).filter(Boolean);
 let selectedAPIs = loadJsonArray('selectedAPIs', DEFAULT_API_SOURCES)
     .filter(item => {
         if (typeof item !== 'string') return false;
@@ -75,7 +77,7 @@ function importLocalSettings(data) {
         if (!IMPORTABLE_SETTINGS.has(key) || typeof value !== 'string') return;
         if (key === 'customAPIs') {
             try {
-                const apis = JSON.parse(value).map(normalizeCustomApi).filter(Boolean);
+                const apis = JSON.parse(value).map(normalizeAppCustomApi).filter(Boolean);
                 localStorage.setItem(key, JSON.stringify(apis));
             } catch {
                 // 忽略损坏的自定义源配置。
@@ -387,7 +389,7 @@ function updateCustomApi(index) {
         showToast('请输入API名称和链接', 'warning');
         return;
     }
-    const normalizedApi = normalizeCustomApi({ name, url, detail, isAdult });
+    const normalizedApi = normalizeAppCustomApi({ name, url, detail, isAdult });
     if (!normalizedApi) {
         showToast('API链接格式不正确，需以http://或https://开头', 'warning');
         return;
@@ -515,7 +517,7 @@ function addCustomApi() {
         showToast('请输入API名称和链接', 'warning');
         return;
     }
-    const normalizedApi = normalizeCustomApi({ name, url, detail, isAdult });
+    const normalizedApi = normalizeAppCustomApi({ name, url, detail, isAdult });
     if (!normalizedApi) {
         showToast('API链接格式不正确，需以http://或https://开头', 'warning');
         return;
@@ -689,15 +691,6 @@ function resetSearchArea() {
     } catch (e) {
         console.error('更新浏览器历史失败:', e);
     }
-}
-
-// 获取自定义API信息
-function getCustomApiInfo(customApiIndex) {
-    const index = parseInt(customApiIndex);
-    if (isNaN(index) || index < 0 || index >= customAPIs.length) {
-        return null;
-    }
-    return customAPIs[index];
 }
 
 // 搜索功能 - 修改为支持多选API和多页结果

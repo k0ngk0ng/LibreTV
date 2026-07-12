@@ -24,3 +24,4 @@ coverage
 *.sw?
 .env
 data/
+.build-version

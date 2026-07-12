@@ -65,7 +65,7 @@ npm start
 
 ## 资源站配置
 
-内置资源站已经从前端代码移到 [`config/sites.json`](config/sites.json)。服务启动时读取 `API_CONFIG_FILE` 指定的 JSON 文件，文件有误时会拒绝启动并在日志中给出原因。
+内置资源站已经从前端代码移到 [`config/sites.json`](config/sites.json)。服务启动时读取 `API_CONFIG_FILE` 指定的 JSON 文件。文件缺失或有误时，Docker 镜像默认会记录警告并回退到镜像内配置；设置 `API_CONFIG_STRICT=true` 可改为直接拒绝启动。
 
 ```json
 {
@@ -94,8 +94,8 @@ Docker 部署时，将宿主机文件只读挂载到容器并指定容器内路�
 
 ```bash
 docker run ... \
-  -e API_CONFIG_FILE=/app/config/sites.json \
-  -v /opt/libretv/sites.json:/app/config/sites.json:ro \
+  -e API_CONFIG_FILE=/app/custom/sites.json \
+  -v /opt/libretv/sites.json:/app/custom/sites.json:ro \
   ghcr.io/k0ngk0ng/libretv:latest
 ```
 
@@ -116,8 +116,11 @@ docker run ... \
 服务端按以下顺序选择显示版本：
 
 1. `APP_VERSION`、`GIT_TAG` 或 `RELEASE_TAG` 中符合 `vX.Y.Z` 的值；
-2. `GIT_COMMIT`、常见 CI commit 变量或仓库当前 commit hash；
-3. `package.json` 版本作为开发环境兜底。
+2. Docker 构建时固化的 `.build-version`；
+3. `GIT_COMMIT`、常见 CI commit 变量或仓库当前 commit hash；
+4. `package.json` 版本作为开发环境兜底。
+
+只有显式提供 commit 的固化构建会把带当前 revision 的静态资源设为长期不可变缓存；源码工作区始终使用 `no-store`，避免未提交修改沿用同一个 commit 缓存键。
 
 发布正式版本时建议：
 
@@ -136,6 +139,7 @@ git push origin v1.0.0
 | `ADMIN_PASSWORD` | 无 | 首次启动必填，至少 8 个字符 |
 | `DATA_DIR` | `./data` | 用户和观看记录目录 |
 | `API_CONFIG_FILE` | `./config/sites.json` | 启动时读取的资源站 JSON 文件 |
+| `API_CONFIG_STRICT` | `false` | 为 `true` 时资源站文件错误会阻止服务启动 |
 | `SESSION_IDLE_HOURS` | `168` | 会话最长空闲时间 |
 | `SESSION_MAX_DAYS` | `30` | 会话绝对有效期 |
 | `TRUST_PROXY` | `true` | 是否信任第一层反向代理 |

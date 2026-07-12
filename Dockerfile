@@ -14,6 +14,7 @@ ENV MAX_RETRIES=2
 ENV CACHE_MAX_AGE=1d
 ENV DATA_DIR=/app/data
 ENV API_CONFIG_FILE=/app/config/sites.json
+ENV DEFAULT_API_CONFIG_FILE=/app/default-sites.json
 ENV TRUST_PROXY=true
 ENV COOKIE_SECURE=auto
 ENV APP_VERSION=${APP_VERSION}
@@ -31,8 +32,12 @@ RUN npm ci --omit=dev && npm cache clean --force
 # 复制应用文件
 COPY --chown=node:node . .
 
-# 在镜像中固化 tag/commit，并移除 Git 历史。
-RUN node scripts/write-build-version.mjs && rm -rf /app/.git
+# 在镜像中固化 tag/commit，保留一份不会被配置挂载覆盖的默认资源站，并移除 Git 历史。
+RUN node scripts/write-build-version.mjs \
+  && cp /app/config/sites.json /app/default-sites.json \
+  && chown node:node /app/default-sites.json \
+  && chmod 600 /app/default-sites.json \
+  && rm -rf /app/.git
 
 # 账户和观看记录保存在独立数据卷中
 RUN mkdir -p /app/data && chown -R node:node /app/data

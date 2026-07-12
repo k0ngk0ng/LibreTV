@@ -11,7 +11,7 @@
     <!-- Favicon -->
     <link rel="icon" href="image/logo.png">
     <link rel="apple-touch-icon" href="image/logo-black.png">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
     
     <script src="libs/tailwindcss.min.js"></script>
     <link rel="stylesheet" href="css/styles.css">
@@ -392,19 +392,13 @@
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "LibreTV",
-        "url": "https://libretv.is-an.org/",
-        "description": "免费在线视频搜索与观看平台",
-        "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://libretv.is-an.org/?s={search_term_string}",
-            "query-input": "required name=search_term_string"
-        }
+        "description": "免费在线视频搜索与观看平台"
     }
     </script>
 
     <script src="js/auth.js"></script>
-    <script src="js/runtime-config.js"></script>
-    <script src="js/config.js"></script>
+    <script src="js/source-storage.js"></script>
+    <script src="js/app-config.js"></script>
     <script src="js/playback-state.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/api.js"></script>
@@ -416,7 +410,7 @@
     <script src="js/pwa-register.js"></script>
 
     <!-- 版本检测脚本 -->
-    <script src="js/version-check.js"></script>
+    <script src="js/runtime-version.js"></script>
 
     <!-- 添加弹窗和URL搜索参数处理脚本 -->
     <script src="js/index-page.js"></script>
