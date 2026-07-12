@@ -550,12 +550,7 @@ async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
     window.fetch = async function(input, init) {
         const requestUrl = typeof input === 'string' ? new URL(input, window.location.origin) : input.url;
         
-        if (requestUrl.pathname.startsWith('/api/')) {
-            if (window.isPasswordProtected && window.isPasswordVerified) {
-                if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-                    return;
-                }
-            }
+        if (requestUrl.pathname === '/api/search' || requestUrl.pathname === '/api/detail') {
             try {
                 const data = await handleApiRequest(requestUrl);
                 return new Response(data, {

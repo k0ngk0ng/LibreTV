@@ -63,13 +63,13 @@ window.onload = function() {
         playerUrlObj.searchParams.set('returnUrl', encodeURIComponent(returnUrl));
     }
     
-    // 同时保存在localStorage中，作为备用
-    localStorage.setItem('lastPageUrl', returnUrl);
+    // 仅保存在当前标签页，避免多个播放页互相覆盖返回地址。
+    sessionStorage.setItem('lastPageUrl', returnUrl);
     
     // 标记来自搜索页面
     if (returnUrl.includes('/s=') || returnUrl.includes('?s=')) {
-        localStorage.setItem('cameFromSearch', 'true');
-        localStorage.setItem('searchPageUrl', returnUrl);
+        sessionStorage.setItem('cameFromSearch', 'true');
+        sessionStorage.setItem('searchPageUrl', returnUrl);
     }
     
     // 获取最终的URL字符串

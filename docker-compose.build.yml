@@ -1,0 +1,8 @@
+services:
+  libretv:
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: libretv-account:local

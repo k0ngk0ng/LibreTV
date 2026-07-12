@@ -1,0 +1,355 @@
+:root {
+    color-scheme: dark;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #06080d;
+    color: #f7f8fb;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(37, 99, 235, 0.22), transparent 34rem),
+        radial-gradient(circle at 85% 90%, rgba(219, 39, 119, 0.18), transparent 32rem),
+        #06080d;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button,
+.secondary-button {
+    border: 1px solid #384152;
+    border-radius: 0.65rem;
+    background: #2563eb;
+    color: #fff;
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+button:hover,
+.secondary-button:hover {
+    background: #1d4ed8;
+    border-color: #6b86c7;
+}
+
+button:active,
+.secondary-button:active {
+    transform: translateY(1px);
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.secondary-button {
+    background: #171b24;
+}
+
+.secondary-button:hover {
+    background: #242a36;
+}
+
+.danger-button {
+    background: transparent;
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+
+.danger-button:hover {
+    background: #450a0a;
+    border-color: #ef4444;
+}
+
+input,
+select {
+    width: 100%;
+    border: 1px solid #343b49;
+    border-radius: 0.65rem;
+    background: #0f131b;
+    color: #fff;
+    padding: 0.75rem 0.85rem;
+    outline: none;
+}
+
+input:focus,
+select:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.auth-page {
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+}
+
+.auth-card {
+    width: min(100%, 27rem);
+    padding: 2rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 1.15rem;
+    background: rgba(12, 15, 22, 0.94);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.brand img {
+    border-radius: 0.75rem;
+}
+
+.brand h1,
+.brand p {
+    margin: 0;
+}
+
+.brand h1 {
+    font-size: 1.75rem;
+}
+
+.brand p {
+    margin-top: 0.2rem;
+    color: #929bad;
+}
+
+.brand.compact {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.auth-form {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1.8rem;
+}
+
+.auth-form label,
+.create-user-grid label span,
+.user-controls label > span {
+    color: #c8cfdb;
+    font-size: 0.9rem;
+}
+
+.auth-form button {
+    margin-top: 0.45rem;
+    min-height: 2.8rem;
+}
+
+.security-note,
+.version-text {
+    color: #7f899b;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+.security-note {
+    margin: 1.35rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid #262c37;
+}
+
+.version-text {
+    margin: 0.65rem 0 0;
+}
+
+.form-message {
+    min-height: 1.25rem;
+    margin: 0.65rem 0 0;
+    color: #86efac;
+    font-size: 0.9rem;
+}
+
+.form-message.error,
+.form-message.is-error {
+    color: #fca5a5;
+}
+
+.admin-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem clamp(1rem, 4vw, 3rem);
+    border-bottom: 1px solid #252b35;
+    background: rgba(7, 9, 14, 0.94);
+    backdrop-filter: blur(14px);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: #aab3c2;
+}
+
+.admin-main {
+    display: grid;
+    gap: 1.25rem;
+    width: min(74rem, calc(100% - 2rem));
+    margin: 1.5rem auto 3rem;
+}
+
+.panel {
+    padding: clamp(1rem, 3vw, 1.5rem);
+    border: 1px solid #252c38;
+    border-radius: 1rem;
+    background: rgba(13, 17, 24, 0.95);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+.panel h1,
+.panel h2,
+.panel p {
+    margin-top: 0;
+}
+
+.panel-heading {
+    margin-bottom: 1rem;
+}
+
+.panel-heading p {
+    margin-bottom: 0;
+    color: #8f99aa;
+}
+
+.users-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.create-user-grid {
+    display: grid;
+    grid-template-columns: minmax(10rem, 1.2fr) minmax(12rem, 1.4fr) minmax(9rem, 0.8fr) auto;
+    align-items: end;
+    gap: 0.85rem;
+}
+
+.create-user-grid label,
+.user-controls label {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.users-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.user-card {
+    padding: 1rem;
+    border: 1px solid #2b3340;
+    border-radius: 0.85rem;
+    background: #0b0f16;
+}
+
+.user-summary,
+.user-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.user-name,
+.user-meta {
+    margin: 0;
+}
+
+.user-meta {
+    margin-top: 0.25rem;
+    color: #7f8999;
+    font-size: 0.82rem;
+}
+
+.status-badge {
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    background: #153b2a;
+    color: #86efac;
+    font-size: 0.78rem;
+}
+
+.status-badge.disabled {
+    background: #3f1d24;
+    color: #fca5a5;
+}
+
+.user-controls {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.8fr) minmax(8rem, 0.55fr) minmax(13rem, 1.4fr);
+    gap: 0.85rem;
+    margin: 1rem 0;
+}
+
+.enabled-control {
+    display: flex !important;
+    align-items: center;
+    align-self: end;
+    min-height: 2.75rem;
+    padding: 0 0.25rem;
+}
+
+.enabled-control input {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.user-actions {
+    justify-content: flex-end;
+}
+
+.empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: #8791a2;
+}
+
+@media (max-width: 800px) {
+    .admin-header,
+    .header-actions,
+    .users-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #adminIdentity {
+        grid-column: 1 / -1;
+    }
+
+    .create-user-grid,
+    .user-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .enabled-control {
+        align-self: auto;
+    }
+}

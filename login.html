@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="same-origin">
+    <title>登录 - LibreTV</title>
+    <link rel="icon" href="image/logo.png">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+    <main class="auth-card" aria-labelledby="loginTitle">
+        <div class="brand">
+            <img src="image/logo.png" alt="" width="48" height="48">
+            <div>
+                <h1 id="loginTitle">LibreTV</h1>
+                <p>登录后继续观影</p>
+            </div>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+            <label for="username">用户名</label>
+            <input id="username" name="username" type="text" autocomplete="username" maxlength="32" required autofocus>
+
+            <label for="password">密码</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+
+            <p id="loginError" class="form-message error" role="alert" aria-live="polite"></p>
+            <button id="loginButton" type="submit">登录</button>
+        </form>
+
+        <p class="security-note">账户与观看记录由服务器保存；登录状态使用安全 Cookie，不会把密码或密码哈希写入网页。</p>
+        <p id="versionInfo" class="version-text"></p>
+    </main>
+    <script src="js/login.js"></script>
+</body>
+</html>

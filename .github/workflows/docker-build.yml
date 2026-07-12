@@ -1,56 +1,87 @@
-name: Build LibreTV image
+name: Build and publish Docker image
 
 on:
-  workflow_run:
-    workflows: ["Bump version"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
   workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    name: Build LibreTV image
+    name: Publish GHCR image
     runs-on: ubuntu-latest
-    if: (github.event.workflow_run.conclusion == 'success' && github.repository == 'LibreSpark/LibreTV') || (github.repository == 'bestZwei/libretv')
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      
-      - name: Read version from VERSION.txt
-        id: version
+
+      - name: Prepare image metadata
+        id: meta
+        shell: bash
         run: |
-          VERSION=$(cat VERSION.txt)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          
-      - name: Set Docker image tag based on repository
-        id: set-tag
-        run: |
-          if [ "${{ github.repository }}" = "LibreSpark/LibreTV" ]; then
-            echo "IMAGE_NAME=libretv" >> $GITHUB_OUTPUT
-            echo "TAGS=${{ secrets.DOCKER_USERNAME }}/libretv:latest,${{ secrets.DOCKER_USERNAME }}/libretv:${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          commit="${GITHUB_SHA::12}"
+          app_version=""
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Release tags must use vX.Y.Z format; got ${GITHUB_REF_NAME}." >&2
+              exit 1
+            fi
+            version="${GITHUB_REF_NAME}"
+            app_version="${GITHUB_REF_NAME}"
+            tags="${image}:${version}"$'\n'"${image}:latest"
           else
-            echo "IMAGE_NAME=libretv-beta" >> $GITHUB_OUTPUT
-            echo "TAGS=${{ secrets.DOCKER_USERNAME }}/libretv-beta:latest" >> $GITHUB_OUTPUT
+            version="${commit}"
+            tags="${image}:${version}"
           fi
 
-      - name: Set up Docker QEMU
+          {
+            echo "image=${image}"
+            echo "version=${version}"
+            echo "app_version=${app_version}"
+            echo "tags<<EOF"
+            echo "${tags}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push LibreTV image
-        uses: docker/build-push-action@v6.14.0
+      - name: Build and push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ steps.set-tag.outputs.TAGS }}
           platforms: linux/amd64,linux/arm64/v8,linux/arm/v7
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.app_version }}
+            GIT_COMMIT=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,206 +1,144 @@
-# LibreTV - 免费在线视频搜索与观看平台
+# LibreTV
 
-<div align="center">
-  <img src="image/logo.png" alt="LibreTV Logo" width="120">
-  <br>
-  <p><strong>自由观影，畅享精彩</strong></p>
-</div>
+LibreTV 是一个自托管的视频搜索与播放页面。本分支以线上版本 `8128f9c`（2025-06-14 22:26）为基线，加入了服务端账户、独立用户历史记录、多源搜索进度和多标签页播放隔离。
 
-## 📺 项目简介
+## 主要变化
 
-LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供来自多个视频源的内容搜索与播放服务。无需注册，即开即用，支持多种设备访问。项目结合了前端技术和后端代理功能，可部署在支持服务端功能的各类网站托管服务上。
+- 使用用户名和密码登录，密码以 `scrypt` 加盐哈希保存在服务器。
+- 登录状态使用 `HttpOnly`、`SameSite=Lax` Cookie；页面、静态资源和代理接口均由服务端校验会话。
+- 管理员可在 `/admin.html` 创建、停用、删除用户，以及重置密码和调整角色。
+- 每个用户的观看集数和播放进度保存在服务器数据目录，不再写入浏览器 `localStorage`。
+- 豆瓣封面通过登录后的同源图片代理加载，避免防盗链导致的破图。
+- 搜索多个视频源时显示完成源数量和进度条。
+- 播放上下文保存在每个标签页独立的 `sessionStorage` 中，多个页面观看不同影片或集数时不会互相覆盖。
+- 页脚版本来自 `vX.Y.Z` 发布标签或 Git commit hash。
 
-本项目基于 [bestK/tv](https://github.com/bestK/tv) 进行重构与增强。
+## 部署要求
 
-<details>
-  <summary>点击查看项目截图</summary>
-  <img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="项目截图" style="max-width:600px">
-</details>
+账户版需要可写的持久数据目录，因此仅支持 Node.js 或 Docker 部署。Vercel、Netlify、Cloudflare Pages 等无持久本地磁盘的 Serverless 部署入口会返回 `503`，防止绕过服务端认证。
 
-## 🥇 感谢赞助
-
-- **[YXVM](https://yxvm.com)**  
-- **[ZMTO/VTEXS](https://zmto.com)**
-
-## 🚀 快速部署
-
-选择以下任一平台，点击一键部署按钮，即可快速创建自己的 LibreTV 实例：
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLibreSpark%2FLibreTV)  
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LibreSpark/LibreTV)  
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LibreSpark/LibreTV) 
-
-## ⚠️ 安全与隐私提醒
-
-### 🔒 强烈建议设置密码保护
-
-为了您的安全和避免潜在的法律风险，我们**强烈建议**在部署时设置密码保护：
-
-- **避免公开访问**：不设置密码的实例任何人都可以访问，可能被恶意利用
-- **防范版权风险**：公开的视频搜索服务可能面临版权方的投诉举报
-- **保护个人隐私**：设置密码可以限制访问范围，保护您的使用记录
-
-### 📝 部署建议
-
-1. **设置环境变量 `PASSWORD`**：为您的实例设置一个强密码
-2. **仅供个人使用**：请勿将您的实例链接公开分享或传播
-3. **遵守当地法律**：请确保您的使用行为符合当地法律法规
-
-### 🚨 重要声明
-
-- 本项目仅供学习和个人使用
-- 请勿将部署的实例用于商业用途或公开服务
-- 如因公开分享导致的任何法律问题，用户需自行承担责任
-- 项目开发者不对用户的使用行为承担任何法律责任
-
-## ⚠️ 请勿使用 Pull Bot 自动同步
-
-Pull Bot 会反复触发无效的 PR 和垃圾邮件，严重干扰项目维护。作者可能会直接拉黑所有 Pull Bot 自动发起的同步请求的仓库所有者。
-
-**推荐做法：**
-
-建议在 fork 的仓库中启用本仓库自带的 GitHub Actions 自动同步功能（见 `.github/workflows/sync.yml`）。 
-
-如需手动同步主仓库更新，也可以使用 GitHub 官方的 [Sync fork](https://docs.github.com/cn/github/collaborating-with-issues-and-pull-requests/syncing-a-fork) 功能。
-
-
-## 📋 详细部署指南
-
-### Cloudflare Pages
-
-1. Fork 或克隆本仓库到您的 GitHub 账户
-2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)，进入 Pages 服务
-3. 点击"创建项目"，连接您的 GitHub 仓库
-4. 使用以下设置：
-   - 构建命令：留空（无需构建）
-   - 输出目录：留空（默认为根目录）
-5. **⚠️ 重要：在"设置" > "环境变量"中添加 `PASSWORD` 变量**
-6. **可选：在"Settings" > "Environment Variables"中添加 `ADMINPASSWORD` 变量**
-7. 点击"保存并部署"
-
-### Vercel
-
-1. Fork 或克隆本仓库到您的 GitHub/GitLab 账户
-2. 登录 [Vercel](https://vercel.com/)，点击"New Project"
-3. 导入您的仓库，使用默认设置
-4. **⚠️ 重要：在"Settings" > "Environment Variables"中添加 `PASSWORD` 变量**
-5. **可选：在"Settings" > "Environment Variables"中添加 `ADMINPASSWORD` 变量**
-6. 点击"Deploy"
-7. 可选：在"Settings" > "Environment Variables"中配置密码保护和设置按钮密码保护
-
-### Docker
-```
-docker run -d \
-  --name libretv \
-  --restart unless-stopped \
-  -p 8899:8080 \
-  -e PASSWORD=your_password \
-  -e ADMINPASSWORD=your_adminpassword \
-  bestzwei/libretv:latest
-```
-
-### Docker Compose
-
-`docker-compose.yml` 文件：
-
-```yaml
-services:
-  libretv:
-    image: bestzwei/libretv:latest
-    container_name: libretv
-    ports:
-      - "8899:8080" # 将内部 8080 端口映射到主机的 8899 端口
-    environment:
-      - PASSWORD=${PASSWORD:-your_password} # 可将 your_password 修改为你想要的密码，默认为 your_password
-      - ADMINPASSWORD=${PASSWORD:-your_adminpassword} # 可将 your_adminpassword 修改为你想要的密码，默认为 your_adminpassword
-    restart: unless-stopped
-```
-启动 LibreTV：
+### Docker Compose（推荐）
 
 ```bash
+cp .env.example .env
+```
+
+编辑 `.env`，至少设置：
+
+```dotenv
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=请改成强密码
+```
+
+然后启动：
+
+```bash
+docker compose pull
 docker compose up -d
 ```
-访问 `http://localhost:8899` 即可使用。
 
-### 本地开发环境
+默认会从当前 GitHub 仓库对应的 `ghcr.io/k0ngk0ng/libretv:latest` 拉取镜像，访问地址为 `http://localhost:8899`。账户和观看记录保存在 Docker 命名卷 `libretv_data`，升级容器时不会丢失。可通过 `LIBRETV_TAG=v1.0.0` 固定到特定版本。
 
-项目包含后端代理功能，需要支持服务器端功能的环境：
+需要从当前源码构建时使用覆盖文件：
 
 ```bash
-# 首先，通过复制示例来设置 .env 文件（可选）
+GIT_COMMIT=$(git rev-parse HEAD) docker compose \
+  -f docker-compose.yml -f docker-compose.build.yml \
+  up -d --build
+```
+
+如果反向代理提供 HTTPS，保持 `TRUST_PROXY=true` 和 `COOKIE_SECURE=auto` 即可；生产环境请务必使用 HTTPS。
+
+### Node.js
+
+需要 Node.js 20 或更高版本：
+
+```bash
 cp .env.example .env
+npm ci
+npm start
+```
 
-# 安装依赖
-npm install
+默认访问地址为 `http://localhost:8080`，数据保存在 `DATA_DIR`（默认 `./data`）。
 
-# 启动开发服务器
+首次启动且数据文件中没有用户时，服务端会使用 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员。为了兼容旧部署，首次启动也会依次读取旧变量 `ADMINPASSWORD`、`PASSWORD`；创建完成后密码以哈希形式保存，环境变量不会用于日常登录验证。
+
+## 从旧密码版迁移
+
+1. 备份当前部署和反向代理配置。
+2. 为数据目录或 Docker 卷配置持久化。
+3. 将旧密码填入 `ADMIN_PASSWORD`，并设置管理员用户名，例如 `admin`。
+4. 启动新版本并使用该账户登录。
+5. 在 `/admin.html` 创建其他用户；每个用户之后会拥有独立的服务器端观看记录。
+
+旧版浏览器里的观看记录不会自动合并到新账户，以免把同一浏览器上不同使用者的数据错误归属给首个登录账户。
+
+## 版本标识
+
+服务端按以下顺序选择显示版本：
+
+1. `APP_VERSION`、`GIT_TAG` 或 `RELEASE_TAG` 中符合 `vX.Y.Z` 的值；
+2. `GIT_COMMIT`、常见 CI commit 变量或仓库当前 commit hash；
+3. `package.json` 版本作为开发环境兜底。
+
+发布正式版本时建议：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+推送到 `main` 后，GitHub Actions 会把镜像发布为 `ghcr.io/k0ngk0ng/libretv:<12位commit>`；推送 `vX.Y.Z` 标签后，会发布同名标签并更新 `latest`。如果直接构建尚未提交的工作区，镜像只能读取当前 `HEAD`；正式部署前请先提交改动，或显式传入 `APP_VERSION`/`GIT_COMMIT`。
+
+## 常用环境变量
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员用户名 |
+| `ADMIN_PASSWORD` | 无 | 首次启动必填，至少 8 个字符 |
+| `DATA_DIR` | `./data` | 用户和观看记录目录 |
+| `SESSION_IDLE_HOURS` | `168` | 会话最长空闲时间 |
+| `SESSION_MAX_DAYS` | `30` | 会话绝对有效期 |
+| `TRUST_PROXY` | `true` | 是否信任第一层反向代理 |
+| `COOKIE_SECURE` | `auto` | `auto`、`true` 或 `false` |
+| `REQUEST_TIMEOUT` | `15000` | 上游代理请求超时（毫秒） |
+| `MAX_RETRIES` | `2` | 上游代理重试次数 |
+| `APP_VERSION` | 空 | `vX.Y.Z` 发布版本 |
+| `GIT_COMMIT` | 空 | 无 tag 时显示的 commit hash |
+
+## 安全说明
+
+- 不要公开分享实例地址或管理员账户。
+- 数据文件含有账户哈希和观看记录，请限制文件权限并定期备份。
+- 修改用户密码、角色或状态会使该用户现有会话立即失效。
+- 登录接口有失败次数限制；管理与历史写入接口同时校验同源请求和 CSRF token。
+- 代理会拒绝本机、内网、链路本地地址，并逐次检查重定向目标。
+- 不要使用简单静态服务器运行本项目；静态托管无法提供账户校验和安全代理。
+
+## 开发与测试
+
+```bash
+npm ci
+npm test
 npm run dev
 ```
 
-访问 `http://localhost:8080` 即可使用（端口可在.env文件中通过PORT变量修改）。
+## API 兼容性
 
-> ⚠️ 注意：使用简单静态服务器（如 `python -m http.server` 或 `npx http-server`）时，视频代理功能将不可用，视频无法正常播放。完整功能测试请使用 Node.js 开发服务器。
+LibreTV 支持标准苹果 CMS V10 API：
 
-## 🔧 自定义配置
+- 搜索：`https://example.com/api.php/provide/vod/?ac=videolist&wd=关键词`
+- 详情：`https://example.com/api.php/provide/vod/?ac=detail&ids=视频ID`
 
-### 密码保护
+## 键盘快捷键
 
-要为您的 LibreTV 实例添加密码保护，可以在部署平台上设置环境变量：
+- 空格：播放/暂停
+- 左右方向键：快退/快进
+- 上下方向键：调节音量
+- `M`：静音
+- `F`：全屏
+- `Esc`：退出全屏
 
-**环境变量名**: `PASSWORD` 
-**值**: 您想设置的密码
+## 免责声明
 
-**环境变量名**: `ADMINPASSWORD` 
-**值**: 您想设置的密码
-
-各平台设置方法：
-
-- **Cloudflare Pages**: Dashboard > 您的项目 > 设置 > 环境变量
-- **Vercel**: Dashboard > 您的项目 > Settings > Environment Variables
-- **Netlify**: Dashboard > 您的项目 > Site settings > Build & deploy > Environment
-- **Docker**: 修改 `docker run` 中 `your_password` 为你的密码
-- **Docker Compose**: 修改 `docker-compose.yml` 中的 `your_password` 为你的密码
-- **本地开发**: SET PASSWORD=your_password
-
-### API兼容性
-
-LibreTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵循以下格式：
-- 搜索接口: `https://example.com/api.php/provide/vod/?ac=videolist&wd=关键词`
-- 详情接口: `https://example.com/api.php/provide/vod/?ac=detail&ids=视频ID`
-
-**添加 CMS 源**:
-1. 在设置面板中选择"自定义接口"
-2. 接口地址: `https://example.com/api.php/provide/vod`
-
-## ⌨️ 键盘快捷键
-
-播放器支持以下键盘快捷键：
-
-- **空格键**: 播放/暂停
-- **左右箭头**: 快退/快进
-- **上下箭头**: 音量增加/减小
-- **M 键**: 静音/取消静音
-- **F 键**: 全屏/退出全屏
-- **Esc 键**: 退出全屏
-
-## 🛠️ 技术栈
-
-- HTML5 + CSS3 + JavaScript (ES6+)
-- Tailwind CSS
-- HLS.js 用于 HLS 流处理
-- DPlayer 视频播放器核心
-- Cloudflare/Vercel/Netlify Serverless Functions
-- 服务端 HLS 代理和处理技术
-- localStorage 本地存储
-
-## ⚠️ 免责声明
-
-LibreTV 仅作为视频搜索工具，不存储、上传或分发任何视频内容。所有视频均来自第三方 API 接口提供的搜索结果。如有侵权内容，请联系相应的内容提供方。
-
-本项目开发者不对使用本项目产生的任何后果负责。使用本项目时，您必须遵守当地的法律法规。
-
-## 💝 支持项目
-
-如果您想支持本项目，可以考虑进行捐款：
-
-[![捐赠](https://img.shields.io/badge/爱心捐赠-无国界医生-1a85ff?style=for-the-badge&logo=medical-cross)](https://www.msf.hk/zh-hant/donate/general?type=one-off)
+LibreTV 仅作为视频搜索工具，不存储、上传或分发视频内容。所有视频均来自第三方 API。使用者应遵守当地法律法规，并自行承担使用后果。

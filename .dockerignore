@@ -4,6 +4,7 @@ netlify*
 .gitignore
 .dockerignore
 .env*
+data/
 nodemon.json
 vercel.json
 Dockerfile*
