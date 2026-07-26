@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "defaultSources": ["example"],
+    "hideAdultSources": false
+  },
+  "sites": {
+    "example": {
+      "api": "https://example.invalid/api.php/provide/vod",
+      "name": "示例资源站（请替换）"
+    }
+  }
+}

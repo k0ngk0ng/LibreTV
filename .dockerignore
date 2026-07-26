@@ -1,0 +1,13 @@
+.github/
+node_modules/
+netlify*
+.gitignore
+.dockerignore
+.env*
+data/
+config/sites.json
+nodemon.json
+vercel.json
+Dockerfile*
+docker-compose*.yml
+.docker/

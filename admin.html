@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="same-origin">
+    <title>用户管理 - LibreTV</title>
+    <link rel="icon" href="image/logo.png">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="admin-page">
+    <header class="admin-header">
+        <a class="brand compact" href="/">
+            <img src="image/logo.png" alt="" width="38" height="38">
+            <span>LibreTV 用户管理</span>
+        </a>
+        <div class="header-actions">
+            <span id="adminIdentity"></span>
+            <a class="secondary-button" href="/">返回首页</a>
+            <button id="adminLogout" class="secondary-button" type="button">退出登录</button>
+        </div>
+    </header>
+
+    <main class="admin-main">
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <h1>创建用户</h1>
+                    <p>普通用户只能访问自己的观看记录；管理员可以维护账户。</p>
+                </div>
+            </div>
+            <form id="createUserForm" class="create-user-grid">
+                <label>
+                    <span>用户名</span>
+                    <input id="newUsername" name="username" autocomplete="off" maxlength="32" required>
+                </label>
+                <label>
+                    <span>初始密码</span>
+                    <input id="newPassword" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                </label>
+                <label>
+                    <span>角色</span>
+                    <select id="newRole" name="role">
+                        <option value="user">普通用户</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                </label>
+                <button type="submit">创建</button>
+            </form>
+            <p id="createMessage" class="form-message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading users-heading">
+                <div>
+                    <h2>现有用户</h2>
+                    <p>可停用账户、调整角色或重置密码。密码留空时不会修改。</p>
+                </div>
+                <button id="refreshUsers" class="secondary-button" type="button">刷新</button>
+            </div>
+            <p id="usersMessage" class="form-message" aria-live="polite"></p>
+            <div id="usersList" class="users-list">
+                <div class="empty-state">正在加载用户…</div>
+            </div>
+        </section>
+    </main>
+
+    <template id="userCardTemplate">
+        <article class="user-card">
+            <div class="user-summary">
+                <div>
+                    <h3 class="user-name"></h3>
+                    <p class="user-meta"></p>
+                </div>
+                <span class="status-badge"></span>
+            </div>
+            <div class="user-controls">
+                <label>
+                    <span>角色</span>
+                    <select class="user-role">
+                        <option value="user">普通用户</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                </label>
+                <label class="enabled-control">
+                    <input class="user-enabled" type="checkbox">
+                    <span>允许登录</span>
+                </label>
+                <label>
+                    <span>重置密码（可选）</span>
+                    <input class="user-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="至少 8 个字符">
+                </label>
+            </div>
+            <div class="user-actions">
+                <button class="save-user" type="button">保存修改</button>
+                <button class="delete-user danger-button" type="button">删除用户</button>
+            </div>
+        </article>
+    </template>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
