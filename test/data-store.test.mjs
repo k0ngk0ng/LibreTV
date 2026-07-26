@@ -19,6 +19,7 @@ test('账户密码、用户隔离和观看记录持久化', async t => {
   const admin = await store.authenticate('ADMIN', 'strong-password');
   assert.equal(admin.username, 'Admin');
   assert.equal(admin.role, 'admin');
+  const historyBaseTime = Date.now();
 
   const viewer = await store.createUser({
     username: 'viewer',
@@ -37,6 +38,7 @@ test('账户密码、用户隔离和观看记录持久化', async t => {
     playbackPosition: 30,
     duration: 1200,
     episodes: ['https://example.com/episode-1.m3u8'],
+    timestamp: historyBaseTime,
   });
   assert.equal(saved.title, '测试影片');
   assert.equal((await store.listHistory(viewer.id)).length, 0);
@@ -48,14 +50,48 @@ test('账户密码、用户隔离和观看记录持久化', async t => {
     episodeIndex: 1,
     playbackPosition: 75,
     duration: 1200,
+    timestamp: historyBaseTime + 100,
   });
   assert.equal(updated.id, saved.id);
   assert.equal(updated.episodeIndex, 1);
   assert.deepEqual(updated.episodes, ['https://example.com/episode-1.m3u8']);
 
+  const newest = await store.upsertHistory(admin.id, {
+    showIdentifier: 'test_42',
+    title: '测试影片',
+    directVideoUrl: 'https://example.com/episode-17.m3u8',
+    episodeIndex: 16,
+    playbackPosition: 180,
+    duration: 1200,
+    timestamp: historyBaseTime + 300,
+  });
+  const stale = await store.upsertHistory(admin.id, {
+    showIdentifier: 'test_42',
+    title: '测试影片',
+    directVideoUrl: 'https://example.com/episode-14.m3u8',
+    episodeIndex: 13,
+    playbackPosition: 900,
+    duration: 1200,
+    timestamp: historyBaseTime + 200,
+  });
+  assert.equal(stale.episodeIndex, 16);
+  assert.equal(stale.directVideoUrl, newest.directVideoUrl);
+  assert.equal((await store.listHistory(admin.id))[0].episodeIndex, 16);
+
+  const intentionalRewatch = await store.upsertHistory(admin.id, {
+    showIdentifier: 'test_42',
+    title: '测试影片',
+    directVideoUrl: 'https://example.com/episode-14.m3u8',
+    episodeIndex: 13,
+    playbackPosition: 45,
+    duration: 1200,
+    timestamp: historyBaseTime + 400,
+  });
+  assert.equal(intentionalRewatch.episodeIndex, 13);
+
   const reloadedStore = createDataStore({ filePath });
   await reloadedStore.init({ adminUsername: 'ignored', adminPassword: 'ignored-password' });
-  assert.equal((await reloadedStore.listHistory(admin.id))[0].playbackPosition, 75);
+  assert.equal((await reloadedStore.listHistory(admin.id))[0].playbackPosition, 45);
   assert.equal((await reloadedStore.listUsers()).length, 2);
 });
 

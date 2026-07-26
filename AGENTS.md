@@ -23,7 +23,8 @@ LibreTV is a self-hosted Node.js/Express video search and playback application. 
 - `js/source-storage.js`: shared browser helpers for locally configured custom sources.
 - `js/app-config.js`: shared frontend constants and server-injected source configuration.
 - `js/playback-state.js`: per-tab playback context in `sessionStorage`.
-- `js/player-runtime.js`: playback, episodes, progress, and source switching.
+- `js/player-runtime-sync.js`: playback, episodes, resilient progress synchronization, and source switching.
+- `js/player-runtime.js`: compatibility loader for historically cached player HTML.
 - `js/runtime-version.js`: footer version rendering.
 - `js/auth.js`: current session and authenticated CSRF requests.
 - `service-worker.js`: cache cleanup only; it must not cache application files.
@@ -42,9 +43,9 @@ Pages that search or play video must load shared dependencies before their consu
 3. `js/app-config.js`
 4. `js/playback-state.js`
 5. `js/ui.js`, `js/api.js`, and `js/search.js` as needed
-6. the page entry point, such as `js/app.js` or `js/player-runtime.js`
+6. the page entry point, such as `js/app.js` or `js/player-runtime-sync.js`
 
-`player.html` does not load `app.js`. Therefore `player-runtime.js` must not depend on symbols defined only in `app.js`. Shared behavior belongs in a shared script and player startup must degrade safely if a nonessential shared helper is unavailable.
+`player.html` does not load `app.js`. Therefore `player-runtime-sync.js` must not depend on symbols defined only in `app.js`. Shared behavior belongs in a shared script and player startup must degrade safely if a nonessential shared helper is unavailable.
 
 When adding or renaming a cross-script global, search the whole repository for collisions. Prefer an explicit `window.LibreTV...` namespace for new shared APIs.
 

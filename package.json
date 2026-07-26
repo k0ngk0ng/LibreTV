@@ -1,7 +1,7 @@
 {
   "name": "libretv",
   "type": "module",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "免费在线视频搜索与观看平台",
   "author": "bestZwei",
